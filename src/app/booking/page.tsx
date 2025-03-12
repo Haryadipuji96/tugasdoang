@@ -1,6 +1,6 @@
 "use client"; // Karena kita menggunakan state dan event handler
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Booking {
   id: number;
@@ -11,7 +11,7 @@ interface Booking {
 }
 
 export default function BookingPage() {
-  // Ambil data dari localStorage jika ada
+  // State untuk bookings
   const savedBookings = localStorage.getItem("bookings");
   const initialBookings: Booking[] = savedBookings ? JSON.parse(savedBookings) : [];
 
@@ -19,12 +19,21 @@ export default function BookingPage() {
   const [formData, setFormData] = useState<Partial<Booking>>({});
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // State untuk modal konfirmasi
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [bookingIdToDelete, setBookingIdToDelete] = useState<number | null>(null);
+
+  // State untuk notifikasi
+  const [isNotificationVisible, setIsNotificationVisible] = useState(false);
+
+  // State untuk pencarian
   const [searchQuery, setSearchQuery] = useState("");
 
   // Daftar kategori yang tersedia
   const categories = ["Standard Room", "Superior Room", "Deluxe Room", "Twin Room", "Single Room"];
 
-  // Fungsi untuk membuka modal
+  // Fungsi untuk membuka modal tambah/edit
   const openModal = (id?: number) => {
     if (id !== undefined) {
       const bookingToEdit = bookings.find((booking) => booking.id === id);
@@ -39,7 +48,7 @@ export default function BookingPage() {
     setIsModalOpen(true);
   };
 
-  // Fungsi untuk menutup modal
+  // Fungsi untuk menutup modal tambah/edit
   const closeModal = () => {
     setIsModalOpen(false);
     setFormData({});
@@ -95,14 +104,41 @@ export default function BookingPage() {
     closeModal();
   };
 
+  // Fungsi untuk membuka modal konfirmasi
+  const openConfirmModal = (id: number) => {
+    setBookingIdToDelete(id);
+    setIsConfirmModalOpen(true);
+  };
+
+  // Fungsi untuk menutup modal konfirmasi
+  const closeConfirmModal = () => {
+    setIsConfirmModalOpen(false);
+    setBookingIdToDelete(null);
+  };
+
   // Fungsi untuk menghapus data
-  const handleDelete = (id: number) => {
-    const updatedBookings = bookings.filter((booking) => booking.id !== id);
+  const handleDelete = () => {
+    if (bookingIdToDelete === null) return;
+
+    // Hapus booking dengan ID tertentu
+    const updatedBookings = bookings.filter((booking) => booking.id !== bookingIdToDelete);
 
     // Simpan ke localStorage
     localStorage.setItem("bookings", JSON.stringify(updatedBookings));
 
+    // Perbarui state dengan booking yang telah diatur ulang ID-nya
     setBookings(updatedBookings);
+
+    // Tutup modal konfirmasi
+    closeConfirmModal();
+
+    // Tampilkan notifikasi
+    setIsNotificationVisible(true);
+
+    // Sembunyikan notifikasi setelah 3 detik
+    setTimeout(() => {
+      setIsNotificationVisible(false);
+    }, 3000);
   };
 
   // Filter data berdasarkan kata kunci pencarian
@@ -113,10 +149,10 @@ export default function BookingPage() {
   );
 
   return (
-    <div className="p-4">
+    <div className="p-4 relative">
       <h1 className="text-2xl font-bold mb-4 text-center">Booking Management</h1>
 
-      {/* Header dengan Tombol Tambah Room dan Pencarian */}
+      {/* Header dengan Tombol Tambah Booking dan Pencarian */}
       <div className="flex justify-between items-center mb-6">
         <button
           onClick={() => openModal()}
@@ -135,7 +171,7 @@ export default function BookingPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal Tambah/Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-[400px] max-h-[90vh] overflow-y-auto">
@@ -203,6 +239,37 @@ export default function BookingPage() {
         </div>
       )}
 
+      {/* Modal Konfirmasi */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[400px]">
+            <h2 className="text-xl font-semibold mb-4">Konfirmasi Penghapusan</h2>
+            <p>Apakah Anda yakin ingin menghapus data ini?</p>
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                onClick={closeConfirmModal}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-300"
+              >
+                Tidak
+              </button>
+              <button
+                onClick={handleDelete}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+              >
+                Ya
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifikasi */}
+      {isNotificationVisible && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg animate-fade-in-out">
+          Data berhasil dihapus!
+        </div>
+      )}
+
       {/* Tabel Data */}
       <table className="w-full border-collapse border">
         <thead>
@@ -232,7 +299,7 @@ export default function BookingPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(booking.id)}
+                    onClick={() => openConfirmModal(booking.id)}
                     className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-300"
                   >
                     Delete

@@ -1,6 +1,5 @@
 "use client"; // Karena kita menggunakan state dan event handler
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Room {
   id: number;
@@ -13,20 +12,30 @@ interface Room {
 }
 
 export default function RoomPage() {
-  // Ambil data dari localStorage jika ada
+  // State untuk rooms
   const savedRooms = localStorage.getItem("rooms");
   const initialRooms: Room[] = savedRooms ? JSON.parse(savedRooms) : [];
-
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
+
+  // State untuk modal tambah/edit
   const [newRoom, setNewRoom] = useState<Partial<Room>>({});
   const [editingRoom, setEditingRoom] = useState<Partial<Room> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // State untuk modal konfirmasi
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [roomIdToDelete, setRoomIdToDelete] = useState<number | null>(null);
+
+  // State untuk notifikasi
+  const [isNotificationVisible, setIsNotificationVisible] = useState(false);
+
+  // State untuk pencarian
   const [searchQuery, setSearchQuery] = useState("");
 
   // Daftar kategori yang tersedia
   const categories = ["Standard Room", "Superior Room", "Deluxe Room", "Twin Room", "Single Room"];
 
-  // Fungsi untuk membuka/tutup modal
+  // Fungsi untuk membuka/tutup modal tambah/edit
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
     setIsModalOpen(false);
@@ -40,27 +49,58 @@ export default function RoomPage() {
       alert("Semua field harus diisi!");
       return;
     }
-
     const newId = rooms.length > 0 ? rooms[rooms.length - 1].id + 1 : 1;
     const roomToAdd = { ...newRoom, id: newId, status: "pending" as const };
     const updatedRooms = [...rooms, roomToAdd as Room];
 
     // Simpan ke localStorage
     localStorage.setItem("rooms", JSON.stringify(updatedRooms));
-
     setRooms(updatedRooms);
     setNewRoom({});
     closeModal();
   };
 
+  // Fungsi untuk membuka modal konfirmasi
+  const openConfirmModal = (id: number) => {
+    setRoomIdToDelete(id);
+    setIsConfirmModalOpen(true);
+  };
+
+  // Fungsi untuk menutup modal konfirmasi
+  const closeConfirmModal = () => {
+    setIsConfirmModalOpen(false);
+    setRoomIdToDelete(null);
+  };
+
   // Fungsi untuk menghapus data
-  const handleDeleteRoom = (id: number) => {
-    const updatedRooms = rooms.filter((room) => room.id !== id);
+  const handleDeleteRoom = () => {
+    if (roomIdToDelete === null) return;
+
+    // Hapus room dengan ID tertentu
+    const updatedRooms = rooms.filter((room) => room.id !== roomIdToDelete);
+
+    // Atur ulang ID untuk semua room yang tersisa
+    const reindexedRooms = updatedRooms.map((room, index) => ({
+      ...room,
+      id: index + 1, // Mulai dari 1
+    }));
 
     // Simpan ke localStorage
-    localStorage.setItem("rooms", JSON.stringify(updatedRooms));
+    localStorage.setItem("rooms", JSON.stringify(reindexedRooms));
 
-    setRooms(updatedRooms);
+    // Perbarui state dengan room yang telah diatur ulang ID-nya
+    setRooms(reindexedRooms);
+
+    // Tutup modal konfirmasi
+    closeConfirmModal();
+
+    // Tampilkan notifikasi
+    setIsNotificationVisible(true);
+
+    // Sembunyikan notifikasi setelah 3 detik
+    setTimeout(() => {
+      setIsNotificationVisible(false);
+    }, 3000);
   };
 
   // Fungsi untuk memulai edit
@@ -73,14 +113,12 @@ export default function RoomPage() {
   // Fungsi untuk menyimpan perubahan
   const handleSaveEdit = () => {
     if (!editingRoom) return;
-
     const updatedRooms = rooms.map((room) =>
       room.id === editingRoom.id ? { ...room, ...newRoom } : room
     );
 
     // Simpan ke localStorage
     localStorage.setItem("rooms", JSON.stringify(updatedRooms));
-
     setRooms(updatedRooms);
     setEditingRoom(null);
     setNewRoom({});
@@ -92,10 +130,8 @@ export default function RoomPage() {
     const updatedRooms = rooms.map((room) =>
       room.id === id ? { ...room, status: "approved" as const } : room
     );
-
     // Simpan ke localStorage
     localStorage.setItem("rooms", JSON.stringify(updatedRooms));
-
     setRooms(updatedRooms);
   };
 
@@ -104,10 +140,8 @@ export default function RoomPage() {
     const updatedRooms = rooms.map((room) =>
       room.id === id ? { ...room, status: "rejected" as const } : room
     );
-
     // Simpan ke localStorage
     localStorage.setItem("rooms", JSON.stringify(updatedRooms));
-
     setRooms(updatedRooms);
   };
 
@@ -117,9 +151,8 @@ export default function RoomPage() {
   );
 
   return (
-    <div className="p-4">
+    <div className="p-4 relative">
       <h1 className="text-2xl font-bold mb-4 text-center">Room Management</h1>
-
       {/* Header dengan Tombol Tambah Room dan Pencarian */}
       <div className="flex justify-between items-center mb-6">
         <button
@@ -138,8 +171,7 @@ export default function RoomPage() {
           />
         </div>
       </div>
-
-      {/* Modal */}
+      {/* Modal Tambah/Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-[400px] max-h-[90vh] overflow-y-auto">
@@ -203,7 +235,35 @@ export default function RoomPage() {
           </div>
         </div>
       )}
-
+      {/* Modal Konfirmasi */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[400px]">
+            <h2 className="text-xl font-semibold mb-4">Konfirmasi Penghapusan</h2>
+            <p>Apakah Anda yakin ingin menghapus data ini?</p>
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                onClick={closeConfirmModal}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300"
+              >
+                Tidak
+              </button>
+              <button
+                onClick={handleDeleteRoom}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-300"
+              >
+                Ya
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Notifikasi */}
+      {isNotificationVisible && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg animate-fade-in-out">
+          Data berhasil dihapus!
+        </div>
+      )}
       {/* Tabel Data */}
       <table className="w-full border-collapse border">
         <thead>
@@ -239,7 +299,7 @@ export default function RoomPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDeleteRoom(room.id)}
+                    onClick={() => openConfirmModal(room.id)}
                     className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-300"
                   >
                     Delete
