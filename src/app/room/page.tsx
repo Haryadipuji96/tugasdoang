@@ -291,7 +291,7 @@ export default function RoomPage() {
                   {room.status === "approved" && "Approved"}
                   {room.status === "rejected" && "Rejected"}
                 </td>
-                <td className="border p-2 space-x-2">
+                <td className="border p-2 space-x-2 text-center">
                   <button
                     onClick={() => handleEditRoom(room)}
                     className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition duration-300"

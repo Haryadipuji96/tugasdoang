@@ -220,7 +220,7 @@ export default function UsersPage() {
                 <td className="border p-2 space-x-2">
                   <button
                     onClick={() => openEditModal(user)}
-                    className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition duration-300"
+                    className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition duration-300 "
                   >
                     Edit
                   </button>

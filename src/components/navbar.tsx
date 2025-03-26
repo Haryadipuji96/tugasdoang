@@ -42,7 +42,7 @@ const Navbar = () => {
     // Default content (Home page)
     return (
       <div className="p-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">My App</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">SELAMAT DATANG</h1>
       </div>
     );
   };
